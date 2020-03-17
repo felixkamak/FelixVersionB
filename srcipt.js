@@ -1,18 +1,22 @@
-let id = 0;
-let replying=false
-
+var id = 0;
+let replying=false;
+  var get_ip;
+	let userLocate = "";
 $(document).ready(function(){
+getID();
+getLocation();
+getIP();
 		$('#addComment').on('click',AddComment);
-		$('#save').on('click',SaveComment);
-		$('#load').on('click',LoadComment);
-		LoadComment();
-	});
+LoadComment();
+});
 function AddComment (){
 	id++;
 	let name = $("#inputName").val();
 	let subject = $("#inputSubject").val();
 	let comment = $("#inputComment").val();
 	let color = $("input[name='inputcolor']:checked").val();
+	let newDate = new Date();
+	let $OS = getOS();
 	let newComment =  `
 	<ul id="comments-${id}" class="list-unstyled mt-3">
 		<li class="media">
@@ -23,7 +27,12 @@ function AddComment (){
 				<h5 >${subject}</h5>
 			<h6>${name}</h6>
 				<p >${comment}</p>
+				<div id="comment-info-${id}">
+				<p class="comment-info">sent in ${userLocate} via ${getBrowser()} using ${$OS} about at ${newDate}</p>
+				<p class="comment-info">User's IP: ${get_ip}</p>
 				<a href="#" class="replyBtn" onclick="AddReplyForm()">Reply</a>
+				</div>
+
 			</div>
 		</li>
 	</ul>`;
@@ -40,6 +49,8 @@ function RenderComment(replyID){
 	let subject = $("#inputSubject-1").val();
 	let comment = $("#inputComment-1").val();
 	let color = $("input[name='inputcolor']:checked").val();
+	let newDate = new Date();
+	let $OS = getOS();
 	let newComment =  `
 	<ul id="comments-${id}" class="list-unstyled mt-3">
 		<li class="media">
@@ -48,13 +59,18 @@ function RenderComment(replyID){
 		</svg>
 			<div class="media-body" id="media-Body-${id}">
 				<h5 >${subject}</h5>
-			<h6 >${name}</h6>
+			<h6>${name}</h6>
 				<p >${comment}</p>
+				<div id="comment-info-${id}">
+				<p class="comment-info">sent in ${userLocate} via ${getBrowser()} using ${$OS} about at ${newDate}</p>
+				<p class="comment-info">User's IP: ${get_ip}</p>
 				<a href="#" class="replyBtn" onclick="AddReplyForm()">Reply</a>
+				</div>
+
 			</div>
 		</li>
 	</ul>`;
-	$("#"+replyID).append(newComment);
+	$(replyID).append(newComment);
 
 	let date = new Date();
 	$("form")[0].reset();
@@ -64,7 +80,6 @@ SaveComment();
 
 function AddReplyForm(){
 	replying = false;
-	id++;
 	var button = $(event.target);
 	let replyForm =  `
 	<div id= "form-group-1"class="form-group" >
@@ -84,13 +99,11 @@ function AddReplyForm(){
 	    <button type="button" class="btn btn-secondary ml-2" onclick="clearForm()" >Cancel</button>
 	  </form>`;
 		// alert(button.attr("id"));
-		var replyid = button.parent().attr("id")
+		var replyid = button.parent();
 if(!replying){
 	$(replyForm).insertAfter(button);
 replying=true;
 }
-
-
 			$("#replyComment").on("click",function(){
 				RenderComment(replyid);
 			});
@@ -99,30 +112,45 @@ replying=true;
 function clearForm(){
 	$("#form-group-1").remove();
 }
-
 function SaveComment(){
-	let comments = $('#commentArea').html();
+
+saveID();
+	let comments= $('#commentArea').html();
 $.ajax({
 	type:'PUT',
-	url:'test.txt',
+	url:'http://127.0.0.1:8887/test.txt',
 	data: comments,
-	success: function(){
 
-	}
 });
 }
 function LoadComment(){
-	$('#commentArea').html("");
 	$.ajax({
 		type:'GET',
-		url:'test.txt',
+		url:'http://127.0.0.1:8887/test.txt',
+		data:'text',
 		success: function(comments){
+			$('#commentArea').html("");
 			let commentList = comments;
 			$('#commentArea').append(commentList);
-
 		}
+	});
+}
+function saveID(){
+	let $ID=" ";
+	$ID+=id;
+	$.ajax({
+		type:'PUT',
+		url:'http://127.0.0.1:8887/id.txt',
+		data: $ID,
 	})
 }
+function getID(){
+	$.ajax({
+		url:'http://127.0.0.1:8887/id.txt',
+		success:function($ID){id=$ID[1];}
+	});
+}
+
 let timeAgo = (date)=>{
 	let currentDate = new Date();
 	let yearDiff = currentDate.getFullYear() - date.getFullYear();
@@ -146,4 +174,64 @@ let timeAgo = (date)=>{
 	if (minuteDiff > 0)
 		return `${minuteDiff} minute${minuteDiff == 1 ? "" : "s"} ago`;
 	return `a few seconds ago`;
+}
+ function getIP() {
+	 $.ajax('http://ip-api.com/json')
+ .then(
+		 function success(response) {
+				 console.log('User\'s Location Data is ', response);
+				 console.log('User\'s Country', response.country);
+		 },
+
+		 function fail(data, status) {
+				 console.log('Request failed.  Returned status of',
+										 status);
+		 }
+ );
+ }
+// Detect Operating System
+function getOS() {
+  var os_name = "Unknown OS";
+  if (navigator.appVersion.indexOf("Win") != -1)
+    os_name = "Windows";
+  if (navigator.appVersion.indexOf("Mac") != -1)
+    os_name = "MacOS";
+  if (navigator.appVersion.indexOf("X11") != -1)
+    os_name = "Unix";
+  if (navigator.appVersion.indexOf("Linux") != -1)
+    os_name = "Linux";
+
+  return os_name;
+}
+function getBrowser() {
+  var browser = "Others";
+  if (navigator.userAgent.indexOf("Chrome") != -1)
+    browser = "Google Chrome";
+  else if (navigator.userAgent.indexOf("Firefox") != -1)
+    browser = "Mozilla Firefox";
+  else if (navigator.userAgent.indexOf("MSIE") != -1)
+    browser = "Internet Exploder";
+  else if (navigator.userAgent.indexOf("Edge") != -1)
+    browser = "Internet Exploder";
+  else if (navigator.userAgent.indexOf("Safari") != -1)
+    browser = "Safari";
+  else if (navigator.userAgent.indexOf("Opera") != -1)
+    browser = "Opera";
+  else
+    browser = "Others";
+
+  return browser;
+}
+function getIP(){
+  $.getJSON("https://api.ipify.org/?format=json", function(e) {
+    get_ip = e.ip;
+});
+}
+function getLocation() {
+	$.ajax({
+		url:'http://ip-api.com/json',
+		success: function(response){
+			userLocate = response.country;
+		}
+	});
 }
